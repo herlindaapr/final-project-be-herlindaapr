@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  services         Service[]         @relation("AdminServices")
+  bookings         Booking[]         @relation("UserBookings")
+  handledBookings  Booking[]         @relation("HandledBookings") // NO fields/references here
+}
+
+model Service {
+  id              Int       @id @default(autoincrement())
+  adminId         Int
+  name            String
+  description     String
+  price           Int
+  durationMinutes Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  admin           User      @relation("AdminServices", fields: [adminId], references: [id])
+  bookingServices BookingService[]
+}
+
+model Booking {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  bookingDate      DateTime
+  status           String
+  notes            String?
+  handledByAdminId Int?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation("UserBookings", fields: [userId], references: [id])
+  handledByAdmin   User?     @relation("HandledBookings", fields: [handledByAdminId], references: [id])
+  bookingServices  BookingService[]
+}
+
+model BookingService {
+  id         Int     @id @default(autoincrement())
+  bookingId  Int
+  serviceId  Int
+  quantity   Int     @default(1)
+
+  booking    Booking @relation(fields: [bookingId], references: [id])
+  service    Service @relation(fields: [serviceId], references: [id])
+}
+
+enum Role {
+  user
+  admin
+}
