@@ -8,10 +8,11 @@ import {
   Delete,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ServiceService } from './service.service';
-import { CreateServiceDto, UpdateServiceDto, ServiceResponseDto } from './dto/service.dto';
+import { CreateServiceDto, UpdateServiceDto, ServiceResponseDto, GetServicesQueryDto } from './dto/service.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -20,13 +21,12 @@ import { Role } from '@prisma/client';
 
 @ApiTags('services')
 @Controller('services')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class ServiceController {
   constructor(private serviceService: ServiceService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
   @ApiOperation({ summary: 'Create a new service (Admin only)' })
   @ApiResponse({
@@ -41,19 +41,22 @@ export class ServiceController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all services' })
+  @ApiOperation({ summary: 'Get all services (filterable)' })
+  @ApiQuery({ name: 'name', required: false, description: 'Name contains (case-insensitive)' })
+  @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum price (inclusive)', type: Number })
+  @ApiQuery({ name: 'maxPrice', required: false, description: 'Maximum price (inclusive)', type: Number })
   @ApiResponse({
     status: 200,
     description: 'List of all services retrieved successfully',
     type: [ServiceResponseDto],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll() {
-    return this.serviceService.findAll();
+  findAll(@Query() query: GetServicesQueryDto) {
+    return this.serviceService.findAll(query);
   }
 
   @Get('my-services')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
   @ApiOperation({ summary: 'Get services created by current admin' })
   @ApiResponse({
@@ -82,9 +85,9 @@ export class ServiceController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
-  @ApiOperation({ summary: 'Update service (Admin only - own services)' })
+  @ApiOperation({ summary: 'Update service (Admin only - can update any service)' })
   @ApiParam({ name: 'id', description: 'Service ID', example: 1 })
   @ApiResponse({
     status: 200,
@@ -92,7 +95,7 @@ export class ServiceController {
     type: ServiceResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required or not your service' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -103,13 +106,13 @@ export class ServiceController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
-  @ApiOperation({ summary: 'Delete service (Admin only - own services)' })
+  @ApiOperation({ summary: 'Delete service (Admin only - can delete any service)' })
   @ApiParam({ name: 'id', description: 'Service ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Service deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required or not your service' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.serviceService.remove(id, user.id);

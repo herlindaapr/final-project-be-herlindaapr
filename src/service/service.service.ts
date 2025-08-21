@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateServiceDto, UpdateServiceDto } from './dto/service.dto';
+import { CreateServiceDto, UpdateServiceDto, GetServicesQueryDto } from './dto/service.dto';
 
 @Injectable()
 export class ServiceService {
@@ -24,8 +24,23 @@ export class ServiceService {
     });
   }
 
-  async findAll() {
+  async findAll(query?: GetServicesQueryDto) {
+    const where: any = {};
+    if (query?.name) {
+      where.name = { contains: query.name, mode: 'insensitive' };
+    }
+    if (query?.minPrice != null || query?.maxPrice != null) {
+      where.price = {} as any;
+      if (query.minPrice != null) {
+        where.price.gte = query.minPrice;
+      }
+      if (query.maxPrice != null) {
+        where.price.lte = query.maxPrice;
+      }
+    }
+
     return this.prisma.service.findMany({
+      where,
       include: {
         admin: {
           select: {
@@ -54,7 +69,7 @@ export class ServiceService {
   }
 
   async findById(id: number) {
-    return this.prisma.service.findUnique({
+    const service = await this.prisma.service.findUnique({
       where: { id },
       include: {
         admin: {
@@ -66,14 +81,24 @@ export class ServiceService {
         },
       },
     });
+
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    return service;
   }
 
   async update(id: number, adminId: number, updateServiceDto: UpdateServiceDto) {
+    // First, find the service to check if it exists
+    const service = await this.findById(id);
+    
+    // Admin is super user - can update any service
+    // No ownership check needed as all admins can edit all services
+
+    // Update the service
     return this.prisma.service.update({
-      where: { 
-        id,
-        adminId, // Ensure only the admin who created it can update
-      },
+      where: { id },
       data: updateServiceDto,
       include: {
         admin: {
@@ -88,11 +113,15 @@ export class ServiceService {
   }
 
   async remove(id: number, adminId: number) {
+    // First, find the service to check if it exists
+    const service = await this.findById(id);
+    
+    // Admin is super user - can delete any service
+    // No ownership check needed as all admins can delete all services
+
+    // Delete the service
     return this.prisma.service.delete({
-      where: { 
-        id,
-        adminId, // Ensure only the admin who created it can delete
-      },
+      where: { id },
     });
   }
 }

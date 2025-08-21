@@ -6,6 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Set global prefix for all routes
+  app.setGlobalPrefix('api');
+  
   // Enable global validation
   app.useGlobalPipes(
     new ValidationPipe({
@@ -15,8 +18,13 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS if needed
-  app.enableCors();
+  // Enable CORS with specific configuration
+  app.enableCors({
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:4173'], // Add your frontend URLs
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true,
+  });
 
   // Swagger Configuration
   const config = new DocumentBuilder()
@@ -48,8 +56,7 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(3000);
-  console.log('Application is running on: http://localhost:3000');
-  console.log('Swagger documentation available at: http://localhost:3000/api');
+  const port = parseInt(process.env.PORT ?? '8080', 10);
+  await app.listen(port);
 }
 bootstrap();

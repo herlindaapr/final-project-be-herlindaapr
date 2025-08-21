@@ -6,40 +6,93 @@ import {
     ValidateNested,
     IsNumber,
     IsPositive,
+    IsEnum,
+    IsEmail,
   } from 'class-validator';
-  import { Type } from 'class-transformer';
+  import { Type, Transform } from 'class-transformer';
   import { PartialType } from '@nestjs/mapped-types';
   import { ApiProperty } from '@nestjs/swagger';
   import { UserResponseDto } from '../../auth/dto/auth.dto';
   import { ServiceResponseDto } from '../../service/dto/service.dto';
-  
-  class BookingServiceDto {
+import { BookingServiceResponseDto } from 'src/booking-service/dto/booking-service.dto';
+
+  export class BookingQueryDto {
     @ApiProperty({
-      description: 'Service ID to book',
-      example: 1,
+      description: 'Search bookings by service name',
+      example: 'haircut',
+      required: false,
     })
-    @IsNumber()
-    @IsPositive()
-    serviceId: number;
-  
+    @IsString()
+    @IsOptional()
+    serviceName?: string;
+
     @ApiProperty({
-      description: 'Quantity of services to book',
+      description: 'Filter by booking status',
+      enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+      required: false,
+    })
+    @IsString()
+    @IsOptional()
+    status?: string;
+
+    @ApiProperty({
+      description: 'Filter by date range (start date)',
+      example: '2025-08-01',
+      required: false,
+    })
+    @IsDateString()
+    @IsOptional()
+    startDate?: string;
+
+    @ApiProperty({
+      description: 'Filter by date range (end date)',
+      example: '2025-08-31',
+      required: false,
+    })
+    @IsDateString()
+    @IsOptional()
+    endDate?: string;
+
+    @ApiProperty({
+      description: 'Page number for pagination',
       example: 1,
       required: false,
       default: 1,
     })
-    @IsNumber()
-    @IsPositive()
     @IsOptional()
-    quantity?: number;
+    @Transform(({ value }) => parseInt(value))
+    @IsNumber()
+    page?: number = 1;
+
+    @ApiProperty({
+      description: 'Number of items per page',
+      example: 10,
+      required: false,
+      default: 10,
+    })
+    @IsOptional()
+    @Transform(({ value }) => parseInt(value))
+    @IsNumber()
+    limit?: number = 10;
   }
   
+
+  
   export class CreateBookingDto {
+
     @ApiProperty({
-      description: 'Booking date and time',
+      description: 'User email who made the booking',
+      example: 'test@test.com',
+    })
+    @IsEmail()
+    @IsOptional()
+    userEmail?: string;
+
+    @ApiProperty({
+      description: 'Booking date and time (ISO-8601 format)',
       example: '2025-08-15T10:00:00.000Z',
     })
-    @IsDateString()
+    @IsString()
     bookingDate: string;
   
     @ApiProperty({
@@ -53,12 +106,9 @@ import {
   
     @ApiProperty({
       description: 'Services to book',
-      type: [BookingServiceDto],
     })
     @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => BookingServiceDto)
-    services: BookingServiceDto[];
+    services: string[];
   }
   
   export class UpdateBookingDto extends PartialType(CreateBookingDto) {
@@ -72,25 +122,56 @@ import {
     @IsOptional()
     status?: string;
   }
-  
-  export class BookingServiceResponseDto {
-    @ApiProperty({ description: 'Booking Service ID', example: 1 })
-    id: number;
-  
-    @ApiProperty({ description: 'Booking ID', example: 1 })
-    bookingId: number;
-  
-    @ApiProperty({ description: 'Service ID', example: 1 })
-    serviceId: number;
-  
-    @ApiProperty({ description: 'Quantity', example: 1 })
-    quantity: number;
-  
+
+  export class UpdateBookingStatusDto {
     @ApiProperty({
-      description: 'Service details',
-      type: ServiceResponseDto,
+      description: 'New booking status',
+      example: 'confirmed',
+      enum: ['pending', 'confirmed', 'completed', 'cancelled'],
     })
-    service: ServiceResponseDto;
+    @IsString()
+    @IsEnum(['pending', 'confirmed', 'completed', 'cancelled'], {
+      message: 'Status must be one of: pending, confirmed, completed, cancelled',
+    })
+    status: string;
+
+    @ApiProperty({
+      description: 'Optional notes for the status change. If not provided, existing notes will remain unchanged.',
+      example: 'Booking confirmed after payment verification',
+      required: false,
+    })
+    @IsString()
+    @IsOptional()
+    notes?: string;
+  }
+
+  export class UserUpdateBookingDto {
+    @ApiProperty({
+      description: 'New booking date and time (ISO-8601 format)',
+      example: '2025-08-20T14:00:00.000Z',
+      required: false,
+    })
+    @IsString()
+    @IsOptional()
+    bookingDate?: string;
+
+    @ApiProperty({
+      description: 'Updated services to book',
+      example: ['1', '2'],
+      required: false,
+    })
+    @IsArray()
+    @IsOptional()
+    services?: string[];
+
+    @ApiProperty({
+      description: 'Updated notes for the booking',
+      example: 'Changed my preferences',
+      required: false,
+    })
+    @IsString()
+    @IsOptional()
+    notes?: string;
   }
   
   export class BookingResponseDto {
@@ -150,4 +231,36 @@ import {
       type: [BookingServiceResponseDto],
     })
     bookingServices: BookingServiceResponseDto[];
+  }
+
+  export class PaginatedBookingResponseDto {
+    @ApiProperty({
+      description: 'Array of bookings',
+      type: [BookingResponseDto],
+    })
+    bookings: BookingResponseDto[];
+
+    @ApiProperty({
+      description: 'Total number of bookings',
+      example: 25,
+    })
+    total: number;
+
+    @ApiProperty({
+      description: 'Current page number',
+      example: 1,
+    })
+    page: number;
+
+    @ApiProperty({
+      description: 'Number of items per page',
+      example: 10,
+    })
+    limit: number;
+
+    @ApiProperty({
+      description: 'Total number of pages',
+      example: 3,
+    })
+    totalPages: number;
   }

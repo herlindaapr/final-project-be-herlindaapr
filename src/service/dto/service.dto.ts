@@ -1,7 +1,8 @@
-import { IsString, IsNumber, IsPositive } from 'class-validator';
+import { IsString, IsNumber, IsPositive, IsOptional, IsInt, Min } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserResponseDto } from '../../auth/dto/auth.dto';
+import { Type } from 'class-transformer';
 
 export class CreateServiceDto {
   @ApiProperty({
@@ -79,4 +80,37 @@ export class ServiceResponseDto {
     type: UserResponseDto,
   })
   admin: UserResponseDto;
+}
+
+export class GetServicesQueryDto {
+  @ApiProperty({
+    description: 'Filter services whose name contains this value (case-insensitive)',
+    example: 'hair',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({
+    description: 'Minimum price (inclusive)',
+    example: 20000,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minPrice?: number;
+
+  @ApiProperty({
+    description: 'Maximum price (inclusive)',
+    example: 100000,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxPrice?: number;
 }
