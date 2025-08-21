@@ -76,8 +76,6 @@ import { BookingServiceResponseDto } from 'src/booking-service/dto/booking-servi
     limit?: number = 10;
   }
   
-
-  
   export class CreateBookingDto {
 
     @ApiProperty({
