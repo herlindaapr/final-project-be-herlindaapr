@@ -41,10 +41,10 @@ npm install
 ```
 
 ### 3. Environment Setup
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory EXAMPLE:
 ```env
 # Database
-DATABASE_URL="postgresql://username:password@localhost:5432/fuwa_touch_db"
+DATABASE_URL="postgresql://(your-username):(your-password)@localhost:5432/fuwa_touch_db"
 
 # JWT Secret
 JWT_SECRET="your-super-secret-jwt-key"

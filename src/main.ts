@@ -20,7 +20,7 @@ async function bootstrap() {
 
   // Enable CORS with specific configuration
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:4173'], // Add your frontend URLs
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:4173', 'https://final-project-fe-herlindaapr-git-main-herlindaaprs-projects.vercel.app'], // Add your frontend URLs
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
