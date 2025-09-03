@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
-import { CreateBookingDto, UpdateBookingDto, UpdateBookingStatusDto, UserUpdateBookingDto, BookingResponseDto, BookingQueryDto, PaginatedBookingResponseDto } from './dto/booking.dto';
+import { CreateBookingDto, UpdateBookingDto, UpdateBookingStatusDto, UserUpdateBookingDto, BookingResponseDto, BookingQueryDto, PaginatedBookingResponseDto, CheckAvailabilityDto, CheckAvailabilityResponseDto } from './dto/booking.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -86,6 +86,43 @@ export class BookingController {
   @ApiResponse({ status: 403, description: 'Forbidden - User role required' })
   getMyBookingStats(@CurrentUser() user: any) {
     return this.bookingService.getUserBookingStats(user.id);
+  }
+
+  @Post('check-availability')
+  @ApiOperation({ 
+    summary: 'Check if a time slot is available for booking',
+    description: 'Checks if the requested time slot conflicts with existing confirmed bookings for the same services'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Availability check completed successfully',
+    type: CheckAvailabilityResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'One or more services not found' })
+  checkAvailability(@Body() checkAvailabilityDto: CheckAvailabilityDto) {
+    return this.bookingService.checkAvailability(checkAvailabilityDto);
+  }
+
+  @Get('confirmed-for-date/:date')
+  @ApiOperation({ 
+    summary: 'Get all confirmed bookings for a specific date',
+    description: 'Returns all confirmed bookings for the specified date to prevent overlapping appointments'
+  })
+  @ApiParam({
+    name: 'date',
+    description: 'Date in YYYY-MM-DD format',
+    example: '2025-08-15',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Confirmed bookings for date retrieved successfully',
+    type: [BookingResponseDto],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getConfirmedBookingsForDate(@Param('date') date: string) {
+    return this.bookingService.getConfirmedBookingsForDate(date);
   }
 
   @Get('by-date')
@@ -221,22 +258,22 @@ export class BookingController {
   @UseGuards(RolesGuard)
   @Roles(Role.user)
   @ApiOperation({ 
-    summary: 'Update own booking details (User only - pending bookings)',
-    description: 'Users can update their own pending bookings: date, services, and notes. Only pending bookings can be modified.'
+    summary: 'Update own booking details (User only - pending and confirmed bookings)',
+    description: 'Users can update their own pending and confirmed bookings: date, services, and notes. Confirmed bookings can be rescheduled if the new time slot is available. Completed and cancelled bookings cannot be modified.'
   })
   @ApiParam({ name: 'id', description: 'Booking ID', example: 1 })
   @ApiResponse({
     status: 200,
-    description: 'Booking updated successfully by user',
+    description: 'Booking updated/rescheduled successfully by user',
     type: BookingResponseDto,
     schema: {
       example: {
         id: 1,
         userId: 5,
         bookingDate: '2025-08-20T14:00:00.000Z',
-        status: 'pending',
-        notes: 'Updated my preferences',
-        handledByAdminId: null,
+        status: 'confirmed',
+        notes: 'Rescheduled my appointment',
+        handledByAdminId: 2,
         createdAt: '2025-08-19T10:30:00.000Z',
         updatedAt: '2025-08-19T16:00:00.000Z',
         user: {
@@ -244,7 +281,11 @@ export class BookingController {
           name: 'John Doe',
           email: 'john@example.com'
         },
-        handledByAdmin: null,
+        handledByAdmin: {
+          id: 2,
+          name: 'Admin User',
+          email: 'admin@example.com'
+        },
         bookingServices: [
           {
             id: 1,
@@ -265,7 +306,7 @@ export class BookingController {
   })
   @ApiResponse({ status: 400, description: 'Invalid booking date format' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Can only update own pending bookings' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Can only update own pending/confirmed bookings, or time slot not available for rescheduling' })
   @ApiResponse({ status: 404, description: 'Booking not found' })
   userUpdateBooking(
     @Param('id', ParseIntPipe) id: number,

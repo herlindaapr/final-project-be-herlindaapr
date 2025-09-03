@@ -262,3 +262,78 @@ import { BookingServiceResponseDto } from 'src/booking-service/dto/booking-servi
     })
     totalPages: number;
   }
+
+  export class CheckAvailabilityDto {
+    @ApiProperty({
+      description: 'Booking date and time to check (ISO-8601 format)',
+      example: '2025-08-15T10:00:00.000Z',
+    })
+    @IsString()
+    bookingDate: string;
+
+    @ApiProperty({
+      description: 'Array of service IDs to check availability for',
+      example: ['1', '2', '3'],
+      type: [String],
+    })
+    @IsArray()
+    @IsString({ each: true })
+    services: string[];
+
+    @ApiProperty({
+      description: 'Exclude specific booking ID from conflict check (for updates)',
+      example: '5',
+      required: false,
+    })
+    @IsString()
+    @IsOptional()
+    excludeBookingId?: string;
+  }
+
+  export class BookingConflict {
+    @ApiProperty({
+      description: 'Conflicting booking ID',
+      example: 1,
+    })
+    bookingId: number;
+
+    @ApiProperty({
+      description: 'Conflicting booking date',
+      example: '2025-08-15T10:00:00.000Z',
+    })
+    bookingDate: Date;
+
+    @ApiProperty({
+      description: 'Conflicting service details',
+      type: ServiceResponseDto,
+    })
+    service: ServiceResponseDto;
+
+    @ApiProperty({
+      description: 'User who made the conflicting booking',
+      type: UserResponseDto,
+    })
+    user: UserResponseDto;
+  }
+
+  export class CheckAvailabilityResponseDto {
+    @ApiProperty({
+      description: 'Whether the requested time slot is available',
+      example: true,
+    })
+    available: boolean;
+
+    @ApiProperty({
+      description: 'Message explaining availability status',
+      example: 'Time slot is available',
+      required: false,
+    })
+    message?: string;
+
+    @ApiProperty({
+      description: 'Array of conflicting bookings if not available',
+      type: [BookingConflict],
+      required: false,
+    })
+    conflicts?: BookingConflict[];
+  }
